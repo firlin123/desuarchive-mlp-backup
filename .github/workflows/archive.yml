@@ -3,7 +3,7 @@ name: Automated Daily Archive Sync
 on:
   schedule:
     # Run daily at 02:00 UTC
-    - cron: "0 2 * * *"
+    - cron: "37 2 * * *"
   workflow_dispatch: # Allow manual triggers
 
 permissions:
