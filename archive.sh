@@ -172,6 +172,29 @@ CURRENT_MONTH=$(date -u +%m)
 # Consolidate either when threshold met or new year starts
 if (( MONTHLY_COUNT >= YEARLY_THRESHOLD )) || { (( MONTHLY_COUNT > 0 )) && (( CURRENT_MONTH == 01 )); }; then
   echo "Consolidating $MONTHLY_COUNT monthly archives into a yearly archive..."
+  
+  if ! ia configure --whoami >/dev/null 2>&1; then
+    echo "Internet Archive 'ia' CLI not configured."
+
+    if [[ -z "${IA_EMAIL:-}" || -z "${IA_PASSWORD:-}" ]]; then
+      echo "Missing credentials. Set IA_EMAIL and IA_PASSWORD environment variables or run 'ia configure' manually."
+      exit 1
+    fi
+
+    echo "Configuring 'ia' CLI with provided credentials..."
+    if ! ia configure --email "$IA_EMAIL" --password "$IA_PASSWORD"; then
+      echo "'ia' CLI configuration failed. Aborting yearly consolidation."
+      exit 1
+    fi
+
+    echo "Verifying 'ia' CLI configuration..."
+    if ! ia configure --whoami >/dev/null 2>&1; then
+      echo "'ia' CLI configuration verification failed. Aborting yearly consolidation."
+      exit 1
+    fi
+
+    echo "'ia' CLI configured successfully."
+  fi
 
   readarray -t MONTHLY_LIST < <(jq -r '.monthly[]' "$MANIFEST")
   FIRST="${MONTHLY_LIST[0]}"
