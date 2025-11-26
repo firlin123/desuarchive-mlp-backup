@@ -139,6 +139,11 @@ if (( DAILY_COUNT >= MONTHLY_THRESHOLD )) || { (( DAILY_COUNT > 0 )) && (( CURRE
     gzip -dc "$GZ" >>"$MONTHLY_FILE"
   done
 
+  echo "Rechecking monthly archive file..."
+  if ! node reCheck.js "$MONTHLY_FILE"; then
+    echo "reCheck failed. Continuing with rechecked data."
+  fi
+
   echo "Compressing monthly archive..."
   gzip -9 -c "$MONTHLY_FILE" >"$MONTHLY_GZ"
 
@@ -221,6 +226,11 @@ if (( MONTHLY_COUNT >= YEARLY_THRESHOLD )) || { (( MONTHLY_COUNT > 0 )) && (( CU
     [[ -f "$GZ" ]] || gh release download "$M" -p "$GZ"
     gzip -dc "$GZ" >>"$YEARLY_FILE"
   done
+
+  echo "Rechecking yearly archive file..."
+  if ! node reCheck.js "$YEARLY_FILE"; then
+    echo "reCheck failed. Continuing with rechecked data."
+  fi
 
   echo "Compressing yearly archive..."
   gzip -9 -c "$YEARLY_FILE" >"$YEARLY_GZ"
