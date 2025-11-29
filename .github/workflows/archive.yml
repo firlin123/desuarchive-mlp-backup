@@ -19,9 +19,8 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y \
-            jq gzip python3-pip pipx git nodejs npm
+          chmod +x ./installPackages.sh
+          ./installPackages.sh jq gzip python3-pip pipx git nodejs npm
 
       - name: Ensure pipx is on PATH
         run: |
