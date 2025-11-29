@@ -1,7 +1,6 @@
 // @ts-check
 const { processComment } = require("./v1/commentProcessor");
 const { deDBfy } = require("./v1/deDBfy");
-// const { fetch } = require("./cachedFetch");
 
 /**
  * Minimal representation of a FoolFuuka post.
@@ -362,6 +361,7 @@ async function fetchThreadSearch(threadNum, site, useChunkedFallback = false) {
                 return { error: 'Thread not found.' };
             }
             const errorLC = res.error.toLowerCase();
+            // The search backend is currently unavailable.
             if (errorLC.includes('search') && errorLC.includes('backend') && (errorLC.includes('unavailable') || errorLC.includes('down'))) {
                 console.log('[DEBUG] The correct message is:', res);
                 if (useChunkedFallback) {
@@ -394,8 +394,6 @@ async function fetchThreadSearch(threadNum, site, useChunkedFallback = false) {
         } else {
             ++page;
         }
-        // // Wait 2 seconds between requests to avoid rate limiting
-        // await new Promise(resolve => setTimeout(resolve, 2500));
     }
     const uniquePosts = Array.from(uniquePostsMap.entries()).sort((a, b) => a[0] - b[0]);
     const tnum = parseInt(threadNum, 10);
