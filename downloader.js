@@ -3,6 +3,7 @@ const { existsSync } = require("fs");
 const { writeFile, readFile } = require("fs/promises");
 const { join } = require("path");
 const { fetchPost, getLatestIndex, fetchThread, getPriority } = require("./ffUtils");
+const { closeCDPFetchers } = require("./cdpFetch");
 
 /** @typedef {import('./ffUtils').MinimalFFPost} MinimalFFPost */
 
@@ -440,4 +441,8 @@ async function main() {
 main().catch(err => {
     console.error('Fatal error:', err);
     process.exit(1);
+}).finally(async () => {
+    console.log('Closing CDP fetchers...');
+    await closeCDPFetchers();
+    console.log('Done.');
 });

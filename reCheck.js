@@ -3,6 +3,7 @@ const { createReadStream, createWriteStream } = require('fs');
 const { stat, rename } = require('fs/promises');
 const { resolve, basename } = require('path');
 const { getSource, fetchPost, fetchThread, getPriority } = require('./ffUtils');
+const { closeCDPFetchers } = require('./cdpFetch');
 
 /** @typedef {import('./ffUtils').MinimalFFPost} MinimalFFPost */
 /** @typedef {import('./ffUtils').MinimalFFThread} MinimalFFThread */
@@ -486,4 +487,8 @@ async function main() {
 main().catch((err) => {
     console.error("Error during processing:", err);
     process.exit(1);
+}).finally(async () => {
+    console.log('Closing CDP fetchers...');
+    await closeCDPFetchers();
+    console.log('Done.');
 });

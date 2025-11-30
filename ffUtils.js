@@ -1,6 +1,7 @@
 // @ts-check
 const { processComment } = require("./v1/commentProcessor");
 const { deDBfy } = require("./v1/deDBfy");
+const { cdpFetch: fetch } = require("./cdpFetch.js");
 
 /**
  * Minimal representation of a FoolFuuka post.
