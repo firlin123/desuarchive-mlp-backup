@@ -41,6 +41,9 @@ jobs:
           git remote set-url origin \
             https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
 
+      - name: Install npm dependencies
+        run: npm install
+
       - name: Run archive script
         run: |
           chmod +x ./archive.sh
