@@ -91,9 +91,16 @@ done
 /**
  * Extracts the User-Agent string, using caching to avoid redundant extraction.
  * 
+ * @param {string} [binary='google-chrome'] - The name or path of the browser binary.
  * @returns {string | null} The extracted User-Agent string, or null if extraction failed.
  */
-function extractUASync(binary) {
+function extractUASync(binary = 'google-chrome') {
+    if (typeof binary !== 'string') {
+        throw new TypeError('Binary must be a string');
+    }
+    if (binary == null) {
+        binary = 'google-chrome';
+    }
     const resolvedPath = resolveBinaryPathSync(binary);
     if (!resolvedPath) {
         console.warn(`Could not resolve binary path: ${binary}`);

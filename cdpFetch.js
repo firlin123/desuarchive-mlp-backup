@@ -399,9 +399,9 @@ async function initCDPFetcher() {
     }
 
     console.log("Extracting User-Agent string...");
-    const ua = extractUASync();
+    const chromeBinary = process.env.CHROME_BINARY || "google-chrome";
+    const ua = extractUASync(chromeBinary);
     const chromeArgs = [
-        // '-c', 'sleep 100000000',
         ...(INTERACTIVE ? [] : ["--headless"]),
         ...(ua ? ["--user-agent=" + ua] : []),
         ...(process.getuid && process.getuid() === 0 ? ["--no-sandbox"] : []),
@@ -413,7 +413,7 @@ async function initCDPFetcher() {
         "about:blank",
     ];
     console.log("Launching Chrome with args:", chromeArgs.join(" "));
-    const chrome = spawn("google-chrome", chromeArgs, { stdio: "ignore" });
+    const chrome = spawn(chromeBinary, chromeArgs, { stdio: "ignore" });
     chromeProc = chrome;
 
     chrome.on("exit", (code) => {
