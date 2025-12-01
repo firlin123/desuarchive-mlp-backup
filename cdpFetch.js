@@ -48,29 +48,79 @@ const CUSTOM_BODY = `
 </html>
 `;
 
+/**
+ * @typedef {Object} ResultObject
+ * @property {number} status - The HTTP status code.
+ * @property {string} data - The response data as a Base64 encoded string.
+ */
+
+/**
+ * @typedef {Object} ResultMessage
+ * @property {number} id - The message ID.
+ * @property {ResultObject} result - The result object.
+ */
+
+/**
+ * @typedef {Object} ErrorMessage
+ * @property {number} id - The message ID.
+ * @property {string} error - The error message.
+ */
+
+/**
+ * @typedef {Object} LogMessage
+ * @property {{ level: 'info' | 'warn' | 'error', args: any[] }} log - The log object.
+ */
+
+/** @typedef {ResultMessage | ErrorMessage | LogMessage} PageMessage */
+
+/**
+ * @typedef {Object} NodeMessage
+ * @property {number} id - The message ID.
+ * @property {string} input - The input URL.
+ * @property {RequestInit} init - The fetch request initialization options.
+ */
+
 function pageScript() {
-    /** @type {typeof window & { debuggerBinding: (msg: string) => void }} */
-    const bindingWindow = /** @type {any} */ (window);
-    const debuggerProxy = {
+    /**
+     * @typedef {Object} FetchResult
+     * @property {number} status - The HTTP status code.
+     * @property {ArrayBuffer} data - The response data as an ArrayBuffer.
+     */
+
+    /** @type {typeof window & { nodeBridgeSend: (msg: string) => void }} */
+    const bridgeWindow = /** @type {any} */ (window);
+    const nodeBridge = {
         /**
-         * Sends a message to the Node.js debugger binding.
+         * Sends a message to the Node.js.
          * 
-         * @param {any} msg - The message to send.
+         * @param {PageMessage} msg - The message to send.
          */
         send: (msg) => {
-            bindingWindow.debuggerBinding(JSON.stringify(msg));
+            bridgeWindow.nodeBridgeSend(JSON.stringify(msg));
         },
         /**
-         * Handles incoming messages from the Node.js debugger binding.
+         * Receives a message from the Node.js.
          * 
-         * @param {{ id: number, input: string, init: RequestInit }} msg - The incoming message.
+         * @param {NodeMessage} msg - The received message.
          */
-        onMessage: (msg) => {
+        receive: (msg) => {
+            if (!msg || typeof msg !== 'object' || typeof msg.id !== 'number' || typeof msg.input !== 'string' || typeof msg.init !== 'object') {
+                bridgeLog("warn", "Invalid message received:", msg);
+                return;
+            }
             performFetch(msg.input, msg.init).then((result) => {
                 const dataBase64 = toBase64(result.data);
-                debuggerProxy.send({ id: msg.id, result: { status: result.status, data: dataBase64 } });
+                nodeBridge.send({ id: msg.id, result: { status: result.status, data: dataBase64 } });
             }).catch((error) => {
-                debuggerProxy.send({ id: msg.id, error: error.message });
+                let msgStr = "Unknown error";
+                if (error && typeof error.message === 'string') {
+                    msgStr = error.message;
+                } else {
+                    try {
+                        msgStr = String(error);
+                    } catch (_) { }
+                }
+                nodeBridge.send({ id: msg.id, error: msgStr });
             });
         }
     };
@@ -91,13 +141,13 @@ function pageScript() {
     }
 
     /**
-     * Sends a log message to the Node.js debugger binding.
+     * Sends a log message to the Node.js.
      * 
      * @param {'info' | 'warn' | 'error'} level - The log level.
      * @param {...any} args - The log arguments.
      */
-    function bindingLog(level, ...args) {
-        debuggerProxy.send({ log: { level, args } });
+    function bridgeLog(level, ...args) {
+        nodeBridge.send({ log: { level, args } });
     }
 
     window.onerror = (event) => {
@@ -105,7 +155,7 @@ function pageScript() {
             event = "Unknown error";
         }
         event = event.toString();
-        bindingLog("error", "Error on page:", event);
+        bridgeLog("error", "Error on page:", event);
     }
 
     /**
@@ -113,7 +163,7 @@ function pageScript() {
      * 
      * @param {string} input - The input URL.
      * @param {RequestInit} init - The fetch request initialization options.
-     * @returns {Promise<{ status: number, data: ArrayBuffer }>} The fetch result.
+     * @returns {Promise<FetchResult>} The fetch result.
      */
     async function performFetch(input, init) {
         const response = await fetch(input, init);
@@ -122,21 +172,21 @@ function pageScript() {
             return result;
         }
         if (!INTERACTIVE) {
-            bindingLog("warn", "Fetch failed with status", response.status, "and INTERACTIVE mode is off, not attempting CAPTCHA solving.");
+            bridgeLog("warn", "Fetch failed with status", response.status, "and INTERACTIVE mode is off, not attempting CAPTCHA solving.");
             return result;
         }
-        bindingLog("info", "Fetch failed with status", response.status, "attempting CAPTCHA solving...");
+        bridgeLog("info", "Fetch failed with status", response.status, "attempting CAPTCHA solving...");
         return await trySolveCaptcha(input);
     }
 
-    /** @type {((value: { status: number, data: ArrayBuffer }) => void)[]} */
+    /** @type {((value: FetchResult) => void)[]} */
     const captchaResolves = [];
 
     /**
      * Attempts to solve a CAPTCHA challenge by displaying an iframe for user interaction.
      * 
      * @param {string} url - The URL to load for CAPTCHA solving.
-     * @returns {Promise<{ status: number, data: ArrayBuffer }>} The result after CAPTCHA solving.
+     * @returns {Promise<FetchResult>} The fetch result after CAPTCHA solving.
      */
     async function trySolveCaptcha(url) {
         /** @type {((value: { status: number, data: ArrayBuffer }) => void) | null} */
@@ -169,7 +219,7 @@ function pageScript() {
      * Real implementation of CAPTCHA solving using an iframe.
      * 
      * @param {string} url - The URL to load for CAPTCHA solving.
-     * @param {(value: { status: number, data: ArrayBuffer }) => void} resolve - The resolve function for the CAPTCHA promise.
+     * @param {(value: FetchResult) => void} resolve - The resolve function for the fetch result.
      */
     function trySolveCaptchaReal(url, resolve) {
         const captchaDiv = document.createElement("div");
@@ -188,7 +238,7 @@ function pageScript() {
         captchaGiveUpButton.onclick = () => {
             captchaDiv.remove();
             clearInterval(checkInterval);
-            bindingLog("info", "User gave up on CAPTCHA solving.");
+            bridgeLog("info", "User gave up on CAPTCHA solving.");
             const txt = getIframeText().trim();
             resolve({ status: 403, data: stringToArrayBuffer(txt ? txt : "CAPTCHA not solved") });
         };
@@ -522,8 +572,8 @@ async function initCDPFetcher() {
     if (cleanedUp) {
         return null;
     }
-    console.log("Adding debugger binding...");
-    if (await promiseErr(Runtime.addBinding({ name: "debuggerBinding" }), "Failed to add debugger binding:")) {
+    console.log("Adding Runtime binding for nodeBridgeSend...");
+    if (await promiseErr(Runtime.addBinding({ name: "nodeBridgeSend" }), "Failed to add Runtime binding:")) {
         return cleanup();
     }
     if (cleanedUp) {
@@ -531,20 +581,26 @@ async function initCDPFetcher() {
     }
 
     /**
-     * Sends a message to the page context via Runtime.evaluate.
+     * Sends a message to the page context.
      * 
-     * @param {{ id: number, input: string, init: RequestInit }} msg - The message to send.
+     * @param {NodeMessage} msg - The message to send.
      */
     function sendMessage(msg) {
         Runtime.evaluate({
-            expression: `debuggerProxy.onMessage(${JSON.stringify(msg)});`,
+            expression: `nodeBridge.receive(${JSON.stringify(msg)});`,
         }).then(() => { }).catch((error) => {
-            console.error("Failed to evaluate message in page context:", error);
+            console.error("Failed to send message to page context:", error);
         });
     }
 
+    /**
+     * @typedef {Object} FetchResult
+     * @property {number} status - The HTTP status code.
+     * @property {Buffer} data - The response data as a Buffer.
+     */
+
     let nextId = 1;
-    /** @type {Map<number, { resolve: (value: { status: number, data: Buffer }) => void; reject: (reason?: any) => void }>} */
+    /** @type {Map<number, { resolve: (value: FetchResult) => void; reject: (reason?: any) => void }>} */
     const pendingRequests = new Map();
 
     /**
@@ -567,7 +623,7 @@ async function initCDPFetcher() {
             redirect: request.redirect,
             credentials: request.credentials,
         };
-        /** @type {{ status: number; data: Buffer }} */
+        /** @type {FetchResult} */
         const resultRaw = await new Promise((resolve, reject) => {
             if (cleanedUp) {
                 reject(new Error("CDP Fetcher has been cleaned up"));
@@ -581,12 +637,17 @@ async function initCDPFetcher() {
     }
 
     Runtime.bindingCalled(({ name, payload, executionContextId }) => {
-        if (name !== "debuggerBinding") {
+        if (name !== "nodeBridgeSend") {
             console.warn("Unknown binding called:", name);
             return;
         }
+        /** @type {PageMessage} */
         const msg = JSON.parse(payload);
-        if (msg.log) {
+        if ('log' in msg) {
+            if (!msg.log || typeof msg.log !== 'object' || typeof msg.log.level !== 'string' || !Array.isArray(msg.log.args)) {
+                console.warn("Invalid log message received:", msg);
+                return;
+            }
             const { level, args } = msg.log;
             const log = typeof console[level] === 'function' ? console[level] : console.log;
             log.apply(console, args);
@@ -597,11 +658,23 @@ async function initCDPFetcher() {
             console.warn("No pending request for message ID:", msg.id);
             return;
         }
-        pendingRequests.delete(msg.id);
-        if (msg.error) {
+        if ('error' in msg) {
+            pendingRequests.delete(msg.id);
             pending.reject(new Error(msg.error));
         } else {
-            const dataBuffer = Buffer.from(msg.result.data, 'base64');
+            if (!msg.result || typeof msg.result.status !== 'number' || typeof msg.result.data !== 'string') {
+                console.warn("Invalid result message received:", msg);
+                return;
+            }
+            /** @type {Buffer | null} */
+            let dataBuffer = null;
+            try {
+                dataBuffer = Buffer.from(msg.result.data, 'base64');
+            } catch (e) {
+                console.warn("Failed to decode Base64 data:", e);
+                return;
+            }
+            pendingRequests.delete(msg.id);
             pending.resolve({ status: msg.result.status, data: dataBuffer });
         }
     });
