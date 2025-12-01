@@ -235,6 +235,7 @@ async function fetchThreadChunked(threadNum, site) {
     while (true) {
         const url = `https://${site}/_/api/chan/chunk/?board=mlp&num=${threadNum}&posts=5000&start=${start}`;
 
+        console.log(`[Chunked] Fetching ${url}...`);
         /** @type {MinimalFFChunk | { error: string }} */
         const res = await myFetch(url, site === 'archived.moe' ? [403] : []).then(r => {
             if (r.status === 403) {
@@ -329,10 +330,10 @@ let lastSearchTime = {
  * 
  * @param {string} threadNum The thread ID.
  * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe'} site The site to process comments for.
- * @param {boolean} [useChunkedFallback=false] Whether to use chunked fetching as a fallback.
+ * @param {boolean} useChunkedFallback Whether to use chunked fetching as a fallback.
  * @returns {Promise<MinimalFFThread | { error: string }>} The thread data.
  */
-async function fetchThreadSearch(threadNum, site, useChunkedFallback = false) {
+async function fetchThreadSearch(threadNum, site, useChunkedFallback) {
     /** @type {Map<number, MinimalFFPost>} */
     const uniquePostsMap = new Map();
     let start = '';
@@ -361,10 +362,10 @@ async function fetchThreadSearch(threadNum, site, useChunkedFallback = false) {
             if (res.error === 'No results found.') {
                 return { error: 'Thread not found.' };
             }
-            const errorLC = res.error.toLowerCase();
-            // The search backend is currently unavailable.
-            if (errorLC.includes('search') && errorLC.includes('backend') && (errorLC.includes('unavailable') || errorLC.includes('down'))) {
-                console.log('[DEBUG] The correct message is:', res);
+            if (
+                res.error === 'The search backend is currently unavailable.' ||
+                res.error === 'The search backend returned an error.'
+            ) {
                 if (useChunkedFallback) {
                     return await fetchThreadChunked(threadNum, site);
                 }
@@ -448,7 +449,7 @@ async function fetchThreadInner(threadNum, site) {
     const result = await resp.json();
     if ('error' in result) {
         if (result.error === 'Thread not found.') {
-            return await fetchThreadSearch(threadNum, site);
+            return await fetchThreadSearch(threadNum, site, false);
         }
         return result;
     }
