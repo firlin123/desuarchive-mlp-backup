@@ -6,7 +6,7 @@ const { join } = require("path");
 const { spawn } = require("child_process");
 const { extractUASync } = require("./extractUA");
 
-/** @typedef {(input: string, init: RequestInit) => Promise<{ status: number; data: Buffer }>} CDPFetcher */
+/** @typedef {(request: Request) => Promise<Response>} CDPFetcher */
 
 const INTERACTIVE = process.env.CDP_FETCHER_INTERACTIVE === "1";
 let ADDITIONAL_CHROME_ARGS_RAW = [];
@@ -281,7 +281,7 @@ let dontReinit = false;
 /** @type {Promise<CDPFetcher | null> | null} */
 let cdpInitPromise = null;
 /** @type {CDPFetcher | null} */
-let cdpFetcher = null;
+let currentCDPFetcher = null;
 /** @type {Promise<void>[]} */
 const cleanupPromises = [];
 /** @type {Array<(doReinit?: boolean) => null>} */
@@ -364,6 +364,10 @@ async function initCDPFetcher() {
         if (cleanupIdx !== -1) {
             cleanups.splice(cleanupIdx, 1);
         }
+        // Clear current fetcher if it's this one
+        if (currentCDPFetcher === cdpFetcher) {
+            currentCDPFetcher = null;
+        }
 
         const cleanupPromise = Promise.all([
             new Promise((resolve) => sureKillProcess(chromeProc, () => resolve(void 0))),
@@ -392,7 +396,7 @@ async function initCDPFetcher() {
             }
         });
 
-        cdpFetcher = null;
+        currentCDPFetcher = null;
         cdpInitPromise = null;
 
         return null;
@@ -529,7 +533,7 @@ async function initCDPFetcher() {
     /**
      * Sends a message to the page context via Runtime.evaluate.
      * 
-     * @param {any} msg - The message to send.
+     * @param {{ id: number, input: string, init: RequestInit }} msg - The message to send.
      */
     function sendMessage(msg) {
         Runtime.evaluate({
@@ -544,17 +548,36 @@ async function initCDPFetcher() {
     const pendingRequests = new Map();
 
     /**
-     * Fetches a URL via the page context.
+     * CDP fetcher function that sends fetch requests via the page context.
      * 
-     * @param {string} input - The input URL.
-     * @param {RequestInit} init - The fetch request initialization options.
+     * @param {Request} request - The Request object to fetch.
+     * @returns {Promise<Response>} A promise that resolves to the fetch Response.
      */
-    function fetchViaCDP(input, init) {
-        return new Promise((resolve, reject) => {
+    async function cdpFetcher(request) {
+        if (cleanedUp) {
+            console.warn("[DEBUG] CDP fetcher called after cleanup. This should not happen. Falling back to direct fetch.");
+            return fetch(request);
+        }
+        const input = request.url;
+        /** @type { RequestInit } */
+        const init = {
+            method: request.method,
+            headers: Object.fromEntries(request.headers),
+            body: request.method !== "GET" && request.method !== "HEAD" ? await request.arrayBuffer() : undefined,
+            redirect: request.redirect,
+            credentials: request.credentials,
+        };
+        /** @type {{ status: number; data: Buffer }} */
+        const resultRaw = await new Promise((resolve, reject) => {
+            if (cleanedUp) {
+                reject(new Error("CDP Fetcher has been cleaned up"));
+                return;
+            }
             const id = nextId++;
             pendingRequests.set(id, { resolve, reject });
             sendMessage({ id, input, init });
         });
+        return new Response(resultRaw.data, { status: resultRaw.status });
     }
 
     Runtime.bindingCalled(({ name, payload, executionContextId }) => {
@@ -598,7 +621,7 @@ async function initCDPFetcher() {
         return null;
     }
 
-    return fetchViaCDP;
+    return cdpFetcher;
 }
 
 /**
@@ -607,8 +630,8 @@ async function initCDPFetcher() {
  * @returns {Promise<CDPFetcher | null>} A promise that resolves to the CDP fetcher or null.
  */
 async function getCDPFetcher() {
-    if (cdpFetcher) {
-        return cdpFetcher;
+    if (currentCDPFetcher) {
+        return currentCDPFetcher;
     }
     if (cdpInitPromise) {
         return cdpInitPromise;
@@ -617,13 +640,15 @@ async function getCDPFetcher() {
         return null;
     }
     const initPromise = initCDPFetcher().then((fetcher) => {
-        cdpFetcher = fetcher;
+        currentCDPFetcher = fetcher;
         cdpInitPromise = null;
         return fetcher;
     });
     cdpInitPromise = initPromise;
     return initPromise;
 }
+
+let prevDirect403 = false;
 
 /**
  * Fetch function that uses CDP to bypass restrictions on archived.moe.
@@ -654,24 +679,29 @@ async function cdpFetch(input, init) {
     if (url.hostname !== "archived.moe") {
         return fetch(request);
     }
+    // If the previous direct fetch resulted in a 403 and we have a CDP fetcher, use it right away
+    if (prevDirect403 && currentCDPFetcher) {
+        return currentCDPFetcher(request);
+    }
     const response = await fetch(request);
     if (response.ok || response.status !== 403) {
+        prevDirect403 = false;
         return response;
     }
-    console.log("Initial fetch failed with status", response.status, "using CDP fetcher...");
-    const fetchViaCDP = await getCDPFetcher();
-    if (!fetchViaCDP) {
-        console.warn("CDP fetcher not available, returning original response.");
+    let initMessages = false;
+    if (!prevDirect403) {
+        prevDirect403 = true;
+        initMessages = true;
+        console.log("Initial fetch failed with status", response.status, "using CDP fetcher...");
+    }
+    const cdpFetcher = await getCDPFetcher();
+    if (!cdpFetcher) {
+        if (initMessages) {
+            console.warn("CDP fetcher not available, returning original response.");
+        }
         return response;
     }
-    const result = await fetchViaCDP(request.url, {
-        method: request.method,
-        headers: Object.fromEntries(request.headers),
-        body: request.method !== "GET" && request.method !== "HEAD" ? await request.arrayBuffer() : undefined,
-        redirect: request.redirect,
-        credentials: request.credentials,
-    });
-    return new Response(result.data, { status: result.status });
+    return cdpFetcher(request);
 }
 
 /**
