@@ -1,0 +1,38 @@
+name: ReCheck Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: "Name of the release to recheck"
+        required: true
+        type: string
+
+jobs:
+  recheck:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install required packages
+        run: ./installPackages.sh gzip gh nodejs npm
+
+      - name: Install Node.js dependencies
+        run: npm install
+
+      - name: Authenticate GitHub CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${GITHUB_TOKEN}" | gh auth login --with-token
+
+      - name: ReCheck Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./recheckRelease.sh "${{ github.event.inputs.release_name }}"
