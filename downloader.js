@@ -9,7 +9,7 @@ const { closeCDPFetchers } = require("./cdpFetch");
 
 /**
  * @typedef {Object} Manifest
- * @property {number} lastDownLoaded The last downloaded post ID.
+ * @property {number} lastDownloaded The last downloaded post ID.
  * @property {Array<string>} daily The list of daily chunk names.
  * @property {Array<string>} monthly The list of monthly chunk names.
  * @property {Array<{name: string, url: string}>} yearly The list of yearly chunk names and URLs.
@@ -18,7 +18,7 @@ const { closeCDPFetchers } = require("./cdpFetch");
 // Last downloaded post file
 const MANIFEST_FILE = join(__dirname, 'manifest.json');
 /** @type {Manifest} */
-const DEFAULT_MANIFEST = { lastDownLoaded: 0, daily: [], monthly: [], yearly: [] };
+const DEFAULT_MANIFEST = { lastDownloaded: 0, daily: [], monthly: [], yearly: [] };
 
 /**
  * Get the manifest data.
@@ -40,8 +40,8 @@ async function getManifest() {
     if (data == null || typeof data !== 'object' || Array.isArray(data)) {
         data = structuredClone(DEFAULT_MANIFEST);
     }
-    if (typeof data.lastDownLoaded !== 'number') {
-        data.lastDownLoaded = 0;
+    if (typeof data.lastDownloaded !== 'number') {
+        data.lastDownloaded = 0;
     }
     if (!Array.isArray(data.daily)) {
         data.daily = [];
@@ -116,13 +116,13 @@ const POST_LOOKUP_FILE = join(__dirname, 'post_lookup_cache.json');
 async function downloadChunk() {
     const manifest = await getManifest();
     const lastDesuPost = await getLatestIndex();
-    const newPosts = lastDesuPost - manifest.lastDownLoaded;
+    const newPosts = lastDesuPost - manifest.lastDownloaded;
     const toDownload = Math.min(Math.max(newPosts, 0), CHUNK_POSTS_MAX);
     if (toDownload === 0) {
         console.log('No new posts to download. Exiting.');
         return false;
     }
-    const start = manifest.lastDownLoaded + 1;
+    const start = manifest.lastDownloaded + 1;
     const end = start + toDownload - 1;
     /** @type {Map<number, MinimalFFPost>} */
     const postLookup = new Map();
@@ -418,7 +418,7 @@ async function downloadChunk() {
     console.log('Updating manifest...');
 
     manifest.daily.push(chunkName);
-    manifest.lastDownLoaded = parseInt(consPost[consPost.length - 1].num, 10);
+    manifest.lastDownloaded = parseInt(consPost[consPost.length - 1].num, 10);
     await saveManifest(manifest);
     return toDownload !== newPosts;
 }
