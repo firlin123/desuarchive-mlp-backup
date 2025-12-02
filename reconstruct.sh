@@ -38,8 +38,12 @@ MANIFEST_URL="https://raw.githubusercontent.com/${REPO}/main/manifest.json"
 # Dependency Check
 # ==============================
 REQUIRED_CMDS=(curl jq parallel gzip dd stat tail)
-MISSING=()
 
+if [[ $ATTEMPT_REPAIR -eq 1 ]]; then
+    REQUIRED_CMDS+=(truncate)
+fi
+
+MISSING=()
 for cmd in "${REQUIRED_CMDS[@]}"; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
         MISSING+=("$cmd")
@@ -84,10 +88,6 @@ if [[ -f "$LOCAL_FILE" ]]; then
         TRUNC_SIZE=$(( FILE_SIZE - LAST_LINE_LEN ))
         if (( TRUNC_SIZE < 0 )); then
             echo "Error: Cannot repair file; it may be too small or empty." >&2
-            exit 1
-        fi
-        if ! command -v truncate >/dev/null 2>&1; then
-            echo "Error: 'truncate' command not found, cannot repair file." >&2
             exit 1
         fi
         echo "Truncating file to $TRUNC_SIZE bytes..." >&2
