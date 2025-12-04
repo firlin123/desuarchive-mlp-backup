@@ -91,10 +91,10 @@ done
 /**
  * Extracts the User-Agent string, using caching to avoid redundant extraction.
  * 
- * @param {string} [binary='google-chrome'] - The name or path of the browser binary.
+ * @param {string} [binary='google-chrome-stable'] - The browser binary to use.
  * @returns {string | null} The extracted User-Agent string, or null if extraction failed.
  */
-function extractUASync(binary = 'google-chrome') {
+function extractUASync(binary = 'google-chrome-stable') {
     if (typeof binary !== 'string') {
         throw new TypeError('Binary must be a string');
     }
