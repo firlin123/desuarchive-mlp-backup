@@ -1,4 +1,4 @@
-name: Automated Daily Archive Sync
+name: Automated Daily Archive
 
 on:
   workflow_dispatch: 
@@ -14,40 +14,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
-      - name: Install system dependencies
-        run: |
-          chmod +x ./installPackages.sh
-          ./installPackages.sh jq gzip python3-pip pipx git nodejs npm
+      - name: Install required packages
+        run: ./installCommands.sh basename bash curl date echo env gh git google-chrome-stable grep gzip head ia jq kill mv node npm pipx shuf sleep tail
 
-      - name: Ensure pipx is on PATH
-        run: |
-          python3 -m pipx ensurepath
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install Internet Archive CLI via pipx
-        run: pipx install internetarchive
-
-      - name: Authenticate GitHub CLI
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-
-      - name: Configure git identity and auth
+      - name: Configure git identity
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Use the workflow token for authenticated pushes and tags
-          git remote set-url origin \
-            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-
-      - name: Install npm dependencies
-        run: npm install
 
       - name: Run archive script
-        run: |
-          chmod +x ./archive.sh
-          ./archive.sh
         env:
+          GH_TOKEN: ${{ github.token }}
           IA_EMAIL: ${{ secrets.IA_EMAIL }}
           IA_PASSWORD: ${{ secrets.IA_PASSWORD }}
+        run: ./archive.sh
