@@ -49,7 +49,7 @@ public function processComment($process_backlinks_only = false)
  * Process comment with error handling.
  * 
  * @param {string | null} comment
- * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe'} site
+ * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe' | 'archive.heinessen.com'} site
  * @returns {string}
  */
 function processComment(comment, site) {
@@ -66,7 +66,7 @@ function processComment(comment, site) {
  * Process comment using the real processing function.
  * 
  * @param {string | null} comment
- * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe'} site
+ * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe' | 'archive.heinessen.com'} site
  * @returns {string}
  */
 function processCommentReal(comment, site) {
@@ -519,13 +519,13 @@ public function processInternalLinks($matches)
 
 /** @typedef {(match: string, fullMatch: string, num: string) => string} ProcessInternalLinksFunc */
 
-/** @type {{ 'desuarchive.org'?: ProcessInternalLinksFunc, 'arch.b4k.dev'?: ProcessInternalLinksFunc, 'archived.moe'?: ProcessInternalLinksFunc }} */
+/** @type {{ 'desuarchive.org'?: ProcessInternalLinksFunc, 'arch.b4k.dev'?: ProcessInternalLinksFunc, 'archived.moe'?: ProcessInternalLinksFunc, 'archive.heinessen.com'?: ProcessInternalLinksFunc }} */
 const processInternalLinksCache = {};
 
 /**
  * Process internal link match to clickable link.
  * 
- * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe'} site - The site to process links for
+ * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe' | 'archive.heinessen.com'} site - The site to process links for
  * @returns {ProcessInternalLinksFunc}
  */
 function getProcessInternalLinks(site) {
@@ -539,7 +539,7 @@ function getProcessInternalLinks(site) {
 /**
  * Process internal link match to clickable link.
  * 
- * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe'} site - The site to process links for
+ * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe' | 'archive.heinessen.com'} site - The site to process links for
  * @returns {(match: string, fullMatch: string, num: string) => string}
  */
 function getProcessInternalLinksReal(site) {
@@ -616,13 +616,13 @@ public function processExternalLinks($matches)
 
 /** @typedef {(match: string, fullMatch: string, link: string, shortname: string, query: string) => string} ProcessExternalLinksFunc */
 
-/** @type {{ 'desuarchive.org'?: ProcessExternalLinksFunc, 'arch.b4k.dev'?: ProcessExternalLinksFunc, 'archived.moe'?: ProcessExternalLinksFunc }} */
+/** @type {{ 'desuarchive.org'?: ProcessExternalLinksFunc, 'arch.b4k.dev'?: ProcessExternalLinksFunc, 'archived.moe'?: ProcessExternalLinksFunc, 'archive.heinessen.com'?: ProcessExternalLinksFunc }} */
 const processExternalLinksCache = {};
 
 /**
  * Process external link match to clickable link.
  * 
- * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe'} site - The site to process links for
+ * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe' | 'archive.heinessen.com'} site - The site to process links for
  * @returns {ProcessExternalLinksFunc}
  */
 function getProcessExternalLinks(site) {
@@ -636,7 +636,7 @@ function getProcessExternalLinks(site) {
 /**
  * Process external link match to clickable link.
  * 
- * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe'} site - The site to process links for
+ * @param {'desuarchive.org' | 'arch.b4k.dev' | 'archived.moe' | 'archive.heinessen.com'} site - The site to process links for
  * @returns {(match: string, fullMatch: string, link: string, shortname: string, query: string) => string}
  */
 function getProcessExternalLinksReal(site) {
@@ -649,15 +649,21 @@ function getProcessExternalLinksReal(site) {
             ? new Set([
                 'g', 'mlp', 'qb', 'v', 'vg', 'vm', 'vmg', 'vp', 'vrpg', 'vst', 'meta',
             ])
-            : new Set([
-                '3', 'a', 'aco', 'adv', 'an', 'asp', 'b', 'bant', 'biz', 'c', 'can', 'cgl', 'ck', 'cm',
-                'co', 'cock', 'con', 'd', 'diy', 'e', 'f', 'fa', 'fap', 'fit', 'fitlit', 'g', 'gd', 'gif',
-                'h', 'hc', 'his', 'hm', 'hr', 'i', 'ic', 'int', 'jp', 'k', 'lgbt', 'lit', 'm', 'mlp', 'mlpol',
-                'mo', 'mtv', 'mu', 'n', 'news', 'o', 'out', 'outsoc', 'p', 'po', 'pol', 'pw', 'q', 'qa', 'qb',
-                'qst', 'r', 'r9k', 's', 's4s', 'sci', 'soc', 'sp', 'spa', 't', 'tg', 'toy', 'trash', 'trv', 'tv',
-                'u', 'v', 'vg', 'vint', 'vip', 'vm', 'vmg', 'vp', 'vr', 'vrpg', 'vst', 'vt', 'w', 'wg', 'wsg',
-                'wsr', 'x', 'xs', 'y', 'de', 'rp', 'talk'
-            ]);
+            : site === 'archived.moe'
+                ? new Set([
+                    '3', 'a', 'aco', 'adv', 'an', 'asp', 'b', 'bant', 'biz', 'c', 'can', 'cgl', 'ck', 'cm',
+                    'co', 'cock', 'con', 'd', 'diy', 'e', 'f', 'fa', 'fap', 'fit', 'fitlit', 'g', 'gd', 'gif',
+                    'h', 'hc', 'his', 'hm', 'hr', 'i', 'ic', 'int', 'jp', 'k', 'lgbt', 'lit', 'm', 'mlp', 'mlpol',
+                    'mo', 'mtv', 'mu', 'n', 'news', 'o', 'out', 'outsoc', 'p', 'po', 'pol', 'pw', 'q', 'qa', 'qb',
+                    'qst', 'r', 'r9k', 's', 's4s', 'sci', 'soc', 'sp', 'spa', 't', 'tg', 'toy', 'trash', 'trv', 'tv',
+                    'u', 'v', 'vg', 'vint', 'vip', 'vm', 'vmg', 'vp', 'vr', 'vrpg', 'vst', 'vt', 'w', 'wg', 'wsg',
+                    'wsr', 'x', 'xs', 'y', 'de', 'rp', 'talk'
+                ])
+                : site === 'archive.heinessen.com'
+                    ? new Set([
+                        'an', 'fit', 'k', 'mlp', 'r9k', 'toy', 'x'
+                    ])
+                    : (() => { throw new Error('Unknown site') })();
 
     /**
      * Process external link match to clickable link.
