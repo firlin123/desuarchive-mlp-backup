@@ -214,7 +214,7 @@ if (( MONTHLY_COUNT >= YEARLY_THRESHOLD || (MONTHLY_COUNT > 0 && CURRENT_MONTH =
         fi
 
         echo "Configuring 'ia' CLI with provided credentials..."
-        if ! ia configure --email "$IA_EMAIL" --password "$IA_PASSWORD"; then
+        if ! ia configure --username "$IA_EMAIL" --password "$IA_PASSWORD"; then
             echo "'ia' CLI configuration failed. Aborting yearly consolidation."
             exit 1
         fi
