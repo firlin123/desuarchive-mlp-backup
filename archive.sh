@@ -143,7 +143,7 @@ if (( DAILY_COUNT >= MONTHLY_THRESHOLD || (DAILY_COUNT > 0 && CURRENT_DAY == 1) 
     fi
 
     # Increment timestamp by 1 second so that it will be next when sorted
-    TIMESTAMP="$(date -u -d "${LAST_TS:0:8} ${LAST_TS:8:2}:${LAST_TS:10:2}:${LAST_TS:12:2} UTC" "+1 second" "+%Y%m%d%H%M%S")"
+    TIMESTAMP="$(date -u -d "${LAST_TS:0:8} ${LAST_TS:8:2}:${LAST_TS:10:2}:${LAST_TS:12:2} UTC +1 second" "+%Y%m%d%H%M%S")"
     MONTHLY="${TIMESTAMP}_monthly_${START}_${END}"
     MONTHLY_FILE="${MONTHLY}.ndjson"
     MONTHLY_GZ="${MONTHLY_FILE}.gz"
@@ -246,7 +246,7 @@ if (( MONTHLY_COUNT >= YEARLY_THRESHOLD || (MONTHLY_COUNT > 0 && CURRENT_MONTH =
     fi
 
     # Increment timestamp by 1 second so that it will be next when sorted
-    TIMESTAMP="$(date -u -d "${LAST_TS:0:8} ${LAST_TS:8:2}:${LAST_TS:10:2}:${LAST_TS:12:2} UTC" "+1 second" "+%Y%m%d%H%M%S")"
+    TIMESTAMP="$(date -u -d "${LAST_TS:0:8} ${LAST_TS:8:2}:${LAST_TS:10:2}:${LAST_TS:12:2} UTC +1 second" "+%Y%m%d%H%M%S")"
     YEARLY="${TIMESTAMP}_yearly_${START}_${END}"
     YEARLY_FILE="${YEARLY}.ndjson"
     YEARLY_GZ="${YEARLY_FILE}.gz"
