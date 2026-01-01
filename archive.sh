@@ -201,8 +201,8 @@ MONTHLY_COUNT="$(jq '.monthly | length' "$MANIFEST" 2>/dev/null || echo 0)"
 CURRENT_MONTH="$((10#$(date -u +%m)))"
 CURRENT_DAY="$((10#$(date -u +%d)))"
 
-# Consolidate either when threshold met or new year starts (+3 days to let the archive settle before rechecking)
-if (( MONTHLY_COUNT >= YEARLY_THRESHOLD || (MONTHLY_COUNT > 0 && CURRENT_MONTH == 1 && CURRENT_DAY >= 3) )); then
+# Consolidate either when threshold met or new year starts (+20 days to let the archive settle before rechecking)
+if (( MONTHLY_COUNT >= YEARLY_THRESHOLD || (MONTHLY_COUNT > 0 && CURRENT_MONTH == 1 && CURRENT_DAY >= 20) )); then
     echo "Consolidating $MONTHLY_COUNT monthly archives into a yearly archive..."
 
     if ! ia configure --whoami >/dev/null 2>&1; then
